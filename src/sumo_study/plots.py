@@ -14,7 +14,7 @@ from matplotlib.patches import PathPatch, Patch, Rectangle
 from matplotlib.path import Path as MPath
 from scipy.stats import gaussian_kde
 
-import fstudio as F
+from . import fstudio as F
 
 _rng = np.random.default_rng(7)
 
@@ -709,7 +709,7 @@ def waterfall(ax, labels, contributions, base, sd=None, raise_color=None, lower_
 def effect_panel(fig, spec, x, y, n=None, band=None, color=None, labels=None, xlabel=""):
     """Effect curve (ALE/PDP) with optional band and a support strip below. Returns (ax, ax_n)."""
     color = color or F.G0
-    gs = spec.subgridspec(2, 1, height_ratios=[4, 0.85], hspace=0.05)
+    gs = spec.subgridspec(2, 1, height_ratios=[5, 0.45], hspace=0.04)
     ax = fig.add_subplot(gs[0])
     axn = fig.add_subplot(gs[1], sharex=ax)
     x, y = np.asarray(x, float), np.asarray(y, float)
