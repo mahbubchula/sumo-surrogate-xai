@@ -1,91 +1,153 @@
-# Validating explainable surrogates of SUMO
+# Validating Explainable Surrogates of SUMO
 
-Code, experimental designs, result tables and figures for the article
-**“Validating Explainable Surrogates of Activity-Based Microscopic Traffic Simulation:
-Independent Tests, Seed Noise, and Simulator-Checked Interventions in SUMO”**
-(Mahbub Hassan and Md Kamrul Islam).
+[![Python](https://img.shields.io/badge/Python-%E2%89%A53.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![SUMO](https://img.shields.io/badge/Eclipse%20SUMO-1.28.0-2C3E50)](https://eclipse.dev/sumo/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Reproducibility](https://img.shields.io/badge/experiments-10%2C216%20runs-orange)](#key-results)
 
-Surrogate models and explainable machine learning are widely used to explore, calibrate and optimize
-traffic simulators. This repository tests how far such surrogates can be trusted. It runs a pre-specified
-experiment of **10,216 Eclipse SUMO simulations** of an activity-based demand model with nine demand and transit inputs.
-Every claim a surrogate makes (accuracy, prediction intervals, sensitivity rankings, interventions and
-calibrated parameters) is checked against fresh simulations.
+Code, experiment designs, result tables, figures, and reproducibility materials for:
 
-## What the study does
+> **Validating Explainable Surrogates of Activity-Based Microscopic Traffic Simulation: Independent Tests, Seed Noise, and Simulator-Checked Interventions in SUMO**
 
-<p align="center"><img src="results/full/figures/png/Fig01_methodological_framework.png" width="85%"></p>
+This repository investigates when surrogate models and explainable machine-learning methods can be trusted as substitutes for expensive traffic-simulation experiments. The study evaluates every major claim against fresh Eclipse SUMO simulations rather than relying only on surrogate diagnostics.
 
-| Question | Experiment |
+## At a glance
+
+- **10,216** Eclipse SUMO simulations
+- **0** failed simulation runs
+- Independent development, calibration, and test settings
+- Explicit quantification of random-seed noise
+- Direct-SUMO Sobol sensitivity analysis
+- Simulator-checked interventions and calibration results
+- Frozen transfer evaluation on an unseen **8 × 8** network
+- Resumable workflows with cached simulator runs and SHA-256 manifests
+
+## Contents
+
+- [Study overview](#study-overview)
+- [Key results](#key-results)
+- [Repository layout](#repository-layout)
+- [Reproduce the study](#reproduce-the-study)
+- [Outputs](#outputs)
+- [Scope and limitations](#scope-and-limitations)
+- [License and citation](#license-and-citation)
+
+## Study overview
+
+<p align="center">
+  <img src="results/full/figures/png/Fig01_methodological_framework.png" width="85%" alt="Study methodological framework">
+</p>
+
+| Research question | Experimental design |
 |---|---|
-| How accurate are surrogates on new settings? | 512 Sobol development settings; 200 calibration and 200 test settings drawn independently; models frozen and hashed before testing |
-| How much of the output is seed noise? | 24 settings × 10 seeds and 200 test settings × 5 seeds; noise share, R² ceiling, RMSE floor |
-| Do prediction intervals cover new runs? | Four interval methods (CQR, split conformal, Gaussian process, GP-normalized conformal); train → calibrate → untouched test |
-| Do surrogate explanations describe the simulator? | Direct-SUMO Sobol indices with seed-noise correction (5,632 runs), compared with surrogate Sobol, SHAP and ALE over 50 refits |
-| What does bus headway actually do? | 8 × 8 × 10-seed factorial of headway and departure variation at two backgrounds, outcomes split by vehicle type |
-| Do surrogate-proposed interventions work? | Proposals re-simulated with 10 matched seeds against the baseline and a random same-distance control |
-| Can parameters be recovered by calibration? | 10 excluded targets, two objectives, fresh-seed validation, equifinality scan |
-| Do surrogates transfer to another network? | Frozen transfer to an 8 × 8 grid and four adaptation methods |
+| How accurate are surrogates on new settings? | 512 Sobol development settings, plus 200 independent calibration and 200 independent test settings. Models are frozen and hashed before testing. |
+| How much output variation is seed noise? | 24 settings × 10 seeds and 200 test settings × 5 seeds; noise share, R² ceiling, and RMSE floor are estimated. |
+| Do prediction intervals cover new runs? | CQR, split conformal, Gaussian process, and GP-normalized conformal intervals evaluated on untouched test data. |
+| Do surrogate explanations describe the simulator? | Direct-SUMO Sobol indices with seed-noise correction, compared with surrogate Sobol, SHAP, and ALE across 50 refits. |
+| What does bus headway actually do? | An 8 × 8 × 10-seed factorial experiment varying headway and departure variation at two background settings. |
+| Do surrogate-proposed interventions work? | Candidate interventions are re-simulated with 10 matched seeds against the baseline and a random same-distance control. |
+| Can parameters be recovered by calibration? | Ten excluded targets, two objective configurations, fresh-seed validation, and an equifinality scan. |
+| Do surrogates transfer to another network? | Frozen transfer to an 8 × 8 grid, followed by evaluation of four adaptation methods. |
 
-## Key results (10,216 SUMO runs, 0 failures)
+## Key results
 
-| Question | Answer from fresh simulations |
+### 10,216 SUMO runs · 0 failures
+
+| Finding | Result from fresh simulations |
 |---|---|
-| Do surrogates generalize? | Frozen ensemble single-run test R² = 0.937 (all-vehicle delay), 0.941 (general-traffic delay), 0.991 (VKT); Ridge 0.478 / 0.417 / 0.945 |
-| How close to the simulator's limit? | Seed-noise SD 1.6 s (delay); ensemble test RMSE 2.3 s; R² ceiling 0.969 |
-| Do 90 % intervals cover? | 0.80–0.90 overall for delay; only 0.70–0.75 in the most congested tertile |
-| What drives delay in SUMO itself? | Direct-SUMO total-order Sobol: departure variation 0.74, bus headway 0.21 (all vehicles); headway 0.014 for general traffic |
-| What does bus headway do? | Longer headways remove buses (−84 vehicles), lowering the all-vehicle mean by 17 s; general-traffic delay unchanged (−0.3 s [−1.3, 0.7]) |
-| Do surrogate interventions work? | 20/20 reduce delay in SUMO (mean 15.8 % vs 17.0 % predicted) but 10/20 reach the 15 % target; random changes of equal size: 6.8 %, 4/20 |
-| Can calibration recover parameters? | Two aggregate outputs: error 0.29 of range (random guess 0.33); eight outputs incl. hourly arrivals: 0.20 |
-| Do models transfer to an 8 × 8 grid? | Frozen: R² < −12, coverage 0 %; residual adaptation with 128 runs: R² 0.93 |
+| **Generalization** | Frozen ensemble single-run test R² = **0.937** for all-vehicle delay, **0.941** for general-traffic delay, and **0.991** for VKT. Ridge achieved 0.478 / 0.417 / 0.945. |
+| **Simulator noise limit** | Seed-noise SD = **1.6 s** for delay; ensemble test RMSE = **2.3 s**; estimated R² ceiling = **0.969**. |
+| **90% interval coverage** | **0.80–0.90** overall for delay, decreasing to **0.70–0.75** in the most congested tertile. |
+| **Direct-SUMO sensitivity** | Total-order Sobol indices: departure variation **0.74** and bus headway **0.21** for all vehicles; headway **0.014** for general traffic. |
+| **Bus headway mechanism** | Longer headways remove buses (**−84 vehicles**), reducing the all-vehicle mean by **17 s** while leaving general-traffic delay essentially unchanged (**−0.3 s**, 95% interval [−1.3, 0.7]). |
+| **Intervention validity** | **20/20** proposed interventions reduced delay in SUMO: **15.8%** observed versus **17.0%** predicted. **10/20** reached the 15% target. Random same-size changes achieved **6.8%**, with **4/20** reaching the target. |
+| **Calibration** | Error was **0.29 of the output range** for two aggregate outputs and **0.20** for eight outputs including hourly arrivals, compared with **0.33** for a random guess. |
+| **Network transfer** | Frozen transfer produced R² < **−12** with **0%** coverage; residual adaptation using 128 simulations reached R² = **0.93**. |
 
-<p align="center"><img src="results/full/figures/png/Fig09_headway_mechanism.png" width="85%"></p>
+<p align="center">
+  <img src="results/full/figures/png/Fig09_headway_mechanism.png" width="85%" alt="Bus headway mechanism results">
+</p>
 
 ## Repository layout
 
-```
-src/sumo_study/        analysis package
-  config.py            parameter domain, outputs, experiment sizes, seed registry
-  simulator.py         activitygen -> duarouter -> sumo, parsing, run cache
-  design.py            Sobol / uniform designs, disjointness checks
-  surrogates.py        Ridge, GP, RF, LightGBM, CatBoost, XGBoost, ensemble
-  validation.py        independent test, noise components, interval methods
-  policy.py            intervention search and matched-seed evaluation
-  calibration.py       inverse calibration and equifinality scan
-  sensitivity.py       direct-SUMO / surrogate Sobol, SHAP, ALE, DML
-  adaptation.py        8×8 transfer adaptation
-  workflow.py          ordered, resumable stages (Study class, CLI)
-  figures.py           article figures
-  export.py            key numbers, LaTeX tables, SHA-256 manifest
-notebooks/             SUMO_Surrogate_Study.ipynb – the documented, ordered study
-docs/                  ANALYSIS_PROTOCOL.md (fixed before the full run)
-results/full/          tables/, figures/{png,pdf,svg}/, designs/, latex_tables/, key_numbers.json
-scripts/               run_study.py, build_notebook.py
+```text
+src/sumo_study/        Analysis package
+  config.py            Parameter domain, outputs, experiment sizes, seed registry
+  simulator.py         activitygen → duarouter → SUMO, parsing, and run cache
+  design.py            Sobol / uniform designs and disjointness checks
+  surrogates.py        Ridge, GP, RF, LightGBM, CatBoost, XGBoost, and ensembles
+  validation.py        Independent tests, noise components, and interval methods
+  policy.py            Intervention search and matched-seed evaluation
+  calibration.py       Inverse calibration and equifinality scan
+  sensitivity.py       Direct-SUMO / surrogate Sobol, SHAP, ALE, and DML
+  adaptation.py        8 × 8 transfer adaptation
+  workflow.py          Ordered, resumable study stages and CLI
+  figures.py            Article figures
+  export.py             Key numbers, LaTeX tables, and SHA-256 manifest
+
+notebooks/              SUMO_Surrogate_Study.ipynb — documented ordered study
+docs/                   ANALYSIS_PROTOCOL.md — protocol fixed before the full run
+results/full/           Tables, figures, designs, LaTeX tables, and key_numbers.json
+scripts/                run_study.py and build_notebook.py
 ```
 
-## Reproduce
+## Reproduce the study
 
-Requirements: Eclipse SUMO 1.28.0 (`sumo`, `netgenerate`, `activitygen`, `duarouter` on `PATH`) and Python ≥ 3.11.
+### Requirements
+
+- Eclipse SUMO **1.28.0** with `sumo`, `netgenerate`, `activitygen`, and `duarouter` available on `PATH`
+- Python **3.11 or newer**
+
+### Command-line workflow
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-# quick end-to-end check (~3 min, small sizes, not for interpretation)
+
+# Quick end-to-end check: small sizes, approximately 3 minutes
+# Not intended for interpreting scientific results.
 python scripts/run_study.py smoke 8
-# full study (10,216 SUMO runs; about 90 min wall time on 8 Apple-M5 cores)
+
+# Full study: 10,216 SUMO runs
 python scripts/run_study.py full 8
 ```
 
-Or open `notebooks/SUMO_Surrogate_Study.ipynb`; it also runs on Google Colab (`pip install eclipse-sumo==1.28.0`).
-Stages are resumable. SUMO runs are cached under `cache/` by a hash of the simulator fingerprint, the
-parameters and the seed. Changing the simulator, physics or experiment sizes requires a new output folder.
+You can also open `notebooks/SUMO_Surrogate_Study.ipynb`. The notebook is designed to run in Google Colab after installing SUMO:
 
-## Scope
+```python
+!pip install eclipse-sumo==1.28.0
+```
 
-All results are conditional on a synthetic signalized grid (6 × 6, with an 8 × 8 transfer test), SUMO's
-activitygen demand model (vehicle trips only; bus outcomes refer to bus vehicles, not passengers) and the stated
-parameter ranges. Effects estimated in the simulator are not real-world causal policy effects.
+### Reproducibility notes
+
+Study stages are resumable. SUMO runs are cached under `cache/` using a hash of the simulator fingerprint, parameters, and random seed. If you change the simulator version, simulation physics, or experiment sizes, use a new output directory.
+
+## Outputs
+
+The full results are organized under `results/full/`:
+
+- `tables/` — machine-readable result tables
+- `figures/png/`, `figures/pdf/`, `figures/svg/` — publication figures
+- `designs/` — experiment designs and seed assignments
+- `latex_tables/` — LaTeX-ready tables
+- `key_numbers.json` — exported headline results
+
+The fixed analysis protocol is available in [`docs/ANALYSIS_PROTOCOL.md`](docs/ANALYSIS_PROTOCOL.md).
+
+## Scope and limitations
+
+The results are conditional on:
+
+- a synthetic signalized **6 × 6** grid, with an **8 × 8** transfer test;
+- SUMO's `activitygen` demand model;
+- vehicle trips rather than passenger-level bus demand; and
+- the parameter ranges and experimental designs specified in the protocol.
+
+Effects estimated in the simulator should not be interpreted as real-world causal policy effects.
 
 ## License and citation
 
-Code: MIT License (see `LICENSE`). Please cite the article and this repository (`CITATION.cff`, release v1.0.0).
+The code is released under the [MIT License](LICENSE).
+
+Please cite the article and this repository. Citation metadata is provided in [`CITATION.cff`](CITATION.cff), and the referenced release is **v1.0.0**.
