@@ -18,23 +18,22 @@ def code(s):
 md("""
 # Explainable SUMO surrogates — validation-first study
 
-This notebook reproduces every result, table and figure of the manuscript. Each section
-addresses one limitation of the earlier study:
+This notebook reproduces every result, table and figure of the article, in order:
 
-| § | Analysis | Limitation addressed |
+| § | Analysis | Question |
 |---|---|---|
-| 3 | Partitioned designs (512 Sobol / 200 / 200×5 seeds) | Internal CV only |
-| 4 | Development CV and frozen surrogates (incl. Gaussian process) | — |
-| 5 | Independent test + noise ceiling | Ensemble never externally tested |
-| 6 | Train → calibrate → test predictive intervals | Coverage reused calibration data |
-| 7 | Repeated-seed replication | One run per setting |
-| 8 | Recourse re-simulated with matched seeds + random control | Reductions only predicted |
-| 9 | Inverse calibration on excluded targets, two objectives | Target in training; identifiability |
-| 10 | Headway × departure-variation factorial | Misread headway coefficient |
-| 11 | Direct-SUMO Sobol indices (simulator ground truth) | GSA only on one surrogate |
-| 12 | Refit stability of Sobol/SHAP/ALE; DML projection | Single fitted surrogate |
-| 13 | Learning curve vs. noise floor | Sample-size adequacy |
-| 14 | Teleport rule, rerouting, 8×8 transfer and adaptation | Simulator/network robustness |
+| 3 | Partitioned designs (512 Sobol / 200 / 200×5 seeds) | Independent evaluation data |
+| 4 | Development CV and frozen surrogates (incl. Gaussian process) | Model fitting |
+| 5 | Independent test + noise ceiling | Accuracy on new settings |
+| 6 | Train → calibrate → test predictive intervals | Interval coverage |
+| 7 | Repeated-seed replication | Seed noise |
+| 8 | Interventions re-simulated with matched seeds + random control | Achieved reductions |
+| 9 | Inverse calibration on excluded targets, two objectives | Identifiability |
+| 10 | Headway × departure-variation factorial | Transit mechanism |
+| 11 | Direct-SUMO Sobol indices (simulator ground truth) | Simulator sensitivity |
+| 12 | Refit stability of Sobol/SHAP/ALE; DML projection | Explanation stability |
+| 13 | Learning curve vs. noise floor | Sample size |
+| 14 | Teleport rule, rerouting, 8×8 transfer and adaptation | Simulator and network robustness |
 | 15–16 | Figures and frozen export | Reproducibility |
 
 Every stage is **resumable**: SUMO runs are cached by a hash of (simulator fingerprint,
@@ -91,28 +90,28 @@ sections = [
     ("4. Development cross-validation and frozen surrogates", "models",
      "Fixed hyperparameters; models are hashed in `models/freeze_record.json` before calibration or test outcomes are read.",
      "T('dev_cv_summary').pivot(index='model', columns='target', values='R2_mean')"),
-    ("5. Independent test of frozen surrogates (Limitation 1)", "independent_test",
+    ("5. Independent test of frozen surrogates", "independent_test",
      "Single-run and seed-mean estimands; paired bootstrap error differences.",
      "tm = T('test_metrics'); display(tm[tm.estimand=='single_run'].pivot(index='model', columns='target', values='R2'))\ndisplay(T('noise_test_settings'))\nfig('Fig04_independent_test')"),
-    ("6. Predictive intervals: train → calibrate → test (Limitation 3)", "intervals",
+    ("6. Predictive intervals: train → calibrate → test", "intervals",
      "CQR, split conformal, native GP and GP-normalised conformal at 90% nominal.",
      "c = T('interval_coverage'); display(c[c.estimand!='seed_mean'][['target','method','estimand','coverage','CI_low','CI_high','mean_width']])\nfig('Fig05_predictive_intervals')"),
-    ("7. Repeated-seed replication (Limitation 2)", "replication",
+    ("7. Repeated-seed replication", "replication",
      "24 development settings spanning the delay range × 10 seeds.",
      "display(T('noise_replication'))\nfig('Fig02_simulation_noise')"),
-    ("8. Recourse validated in SUMO (Limitation 4)", "recourse",
+    ("8. Surrogate-proposed interventions validated in SUMO", "recourse",
      "Surrogate proposals re-simulated with 10 matched seeds against the baseline and a random same-distance control.",
      "display(T('recourse_overview'))\nfig('Fig09_recourse_validation')"),
-    ("9. Inverse calibration on excluded targets (Limitation 5)", "inverse_calibration",
+    ("9. Inverse calibration on excluded targets", "inverse_calibration",
      "Two objectives; fresh-seed re-simulation; dense equifinality scan.",
      "display(T('inverse_parameter_recovery').groupby(['objective','parameter']).abs_error.median().unstack(0))\nfig('Fig10_inverse_calibration')"),
-    ("10. Headway × departure-variation factorial (Limitation 7)", "mechanism",
+    ("10. Headway × departure-variation factorial", "mechanism",
      "8×8 levels × 10 common seeds at two backgrounds; outcomes separated by vehicle type.",
      "display(T('mechanism_variance_shares').pivot_table(index=['background','outcome'], columns='component', values='share'))\nfig('Fig08_headway_mechanism')"),
     ("11. Direct-SUMO Sobol indices", "sobol_sumo",
      "Radial A/B/AB_i design on the simulator itself; seed-noise-corrected estimators.",
      "s = T('sobol_sumo_indices'); s.pivot_table(index='parameter', columns=['target','estimator'], values='ST').round(3)"),
-    ("12. Surrogate sensitivity, refit stability, SHAP, ALE, DML (Limitation 6)", "sensitivity",
+    ("12. Surrogate sensitivity, refit stability, SHAP, ALE, DML", "sensitivity",
      "50 bootstrap refits of the ensemble; interventional ensemble TreeSHAP; ALE with refit bands.",
      "display(T('sobol_rank_stability').groupby('target')[['kendall_tau','top2_same']].mean())\nfig('Fig06_sobol_sensitivity'); fig('Fig07_ALE_response_shapes')"),
     ("13. Learning curve against the noise floor", "learning_curve", "Development folds only.",

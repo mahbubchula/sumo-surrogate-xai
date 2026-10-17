@@ -1,4 +1,4 @@
-"""Ordered, resumable research workflow. Each stage maps to one manuscript limitation/analysis.
+"""Ordered, resumable research workflow. Each stage is one analysis of the article.
 
 Usage (notebook or CLI)::
 
@@ -214,7 +214,7 @@ class Study:
         return summary
 
     # =====================================================================================
-    # 3. Independent test of frozen surrogates + simulation-noise ceiling (Limitation 1)
+    # 3. Independent test of frozen surrogates + simulation-noise ceiling
     # =====================================================================================
     def stage_independent_test(self):
         test = self.data("test")
@@ -227,7 +227,7 @@ class Study:
         return m[m.estimand == "single_run"]
 
     # =====================================================================================
-    # 4. Predictive intervals: train -> calibration -> untouched test (Limitation 3)
+    # 4. Predictive intervals: train -> calibration -> untouched test
     # =====================================================================================
     def stage_intervals(self):
         train, calib, test = self.data("train"), self.data("calibration"), self.data("test")
@@ -244,7 +244,7 @@ class Study:
         return summary
 
     # =====================================================================================
-    # 5. Repeated-seed replication (Limitation 2)
+    # 5. Repeated-seed replication
     # =====================================================================================
     def stage_replication(self):
         train = self.data("train").sort_values(TARGETS[0]).reset_index(drop=True)
@@ -263,7 +263,7 @@ class Study:
         return self.save(noise, "noise_replication")
 
     # =====================================================================================
-    # 6. Recourse proposed by the surrogate, validated in SUMO (Limitation 4)
+    # 6. Recourse proposed by the surrogate, validated in SUMO
     # =====================================================================================
     def stage_recourse(self):
         train = self.data("train")
@@ -301,7 +301,7 @@ class Study:
         return self.save(agg, "recourse_overview")
 
     # =====================================================================================
-    # 7. Inverse calibration on excluded targets with fresh-seed validation (Limitation 5)
+    # 7. Inverse calibration on excluded targets with fresh-seed validation
     # =====================================================================================
     def stage_inverse_calibration(self):
         c = self.cfg
@@ -356,7 +356,7 @@ class Study:
         return self.save(pd.DataFrame(rec_rows), "inverse_parameter_recovery")
 
     # =====================================================================================
-    # 8. Controlled headway x departure-variation factorial (Limitation 7)
+    # 8. Controlled headway x departure-variation factorial
     # =====================================================================================
     def stage_mechanism(self):
         c = self.cfg
@@ -440,7 +440,7 @@ class Study:
         return self.save(pd.concat(rows + sur, ignore_index=True), "sobol_sumo_indices")
 
     # =====================================================================================
-    # 10. Surrogate sensitivity with refit stability, SHAP, ALE, DML (Limitation 6)
+    # 10. Surrogate sensitivity with refit stability, SHAP, ALE, DML
     # =====================================================================================
     def stage_sensitivity(self):
         c = self.cfg

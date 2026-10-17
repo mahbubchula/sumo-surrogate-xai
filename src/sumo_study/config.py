@@ -44,8 +44,7 @@ SHORT: dict[str, str] = {
     "uniformRandomTraffic": "Random traf.", "morningPeakProp": "Peak share",
 }
 
-# Primary surrogate outputs (as in the original manuscript).
-# Primary surrogate outputs: the two original outputs plus general-traffic time loss, which
+# Primary surrogate outputs: all-vehicle time loss, VKT and general-traffic time loss, which
 # excludes scheduled buses (their stop dwell time is counted by SUMO as time loss).
 TARGETS: list[str] = ["mean_time_loss_sec", "total_vkt_km", "general_time_loss_sec"]
 TARGET_LABELS = {"mean_time_loss_sec": "Mean time loss [s]", "total_vkt_km": "VKT [km]",

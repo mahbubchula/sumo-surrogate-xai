@@ -1,7 +1,7 @@
 """Surrogate-proposed interventions (recourse) validated in SUMO with matched seeds.
 
 Three arms per scenario share the same SUMO seeds:
-* ``baseline``  - the original congested setting;
+* ``baseline``  - the congested baseline setting;
 * ``recourse``  - minimum-change lever setting predicted to cut delay >= 15 % while keeping
   predicted completed trips >= 95 % of baseline;
 * ``random``    - a random lever change of the SAME normalised distance (control: does the

@@ -8,8 +8,8 @@ cannot have influenced model or method selection.
 * **Primary prediction target:** the outcome of a single future SUMO run at a new parameter
   setting (one activitygen/duarouter/sumo seed). The seed-mean response is reported as a
   secondary, explicitly different estimand.
-* **Outputs:** mean time loss of completed vehicles (`mean_time_loss_sec`, original endpoint),
-  completed-trip VKT (`total_vkt_km`, original endpoint), and general-traffic time loss
+* **Outputs:** mean time loss of completed vehicles (`mean_time_loss_sec`),
+  completed-trip VKT (`total_vkt_km`), and general-traffic time loss
   excluding scheduled buses (`general_time_loss_sec`, added because SUMO counts bus dwell
   time at stops as time loss, which makes the all-vehicle mean depend on the number of buses).
 
@@ -23,7 +23,7 @@ cannot have influenced model or method selection.
 ## Fixed modelling choices
 * Model zoo with fixed hyperparameters: Ridge (standardised), Gaussian process (Matérn 5/2 ARD
   + white noise), Random forest, LightGBM, CatBoost, XGBoost; **primary surrogate = equal-weight
-  CatBoost + XGBoost ensemble** (as in the original manuscript). No tuning on calibration or
+  CatBoost + XGBoost ensemble**. No tuning on calibration or
   test data. Models are frozen and hashed (`models/freeze_record.json`) before any calibration
   or test outcome is read.
 * Interval methods at 90 % nominal: CQR (LightGBM quantiles), split conformal on ensemble
@@ -55,4 +55,4 @@ cannot have influenced model or method selection.
   baseline (joint criterion). Results are reported whatever their direction.
 * No simulation is excluded; failures stop the pipeline. Teleports/unfinished vehicles are
   audited and reported.
-* Results that contradict the original manuscript are reported as such.
+* All results are reported, whatever their direction.

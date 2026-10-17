@@ -3,7 +3,7 @@
 Each target is a new parameter vector (never used for training/calibration/testing), run under
 several seeds; its seed-mean outputs are the "observations". Two objectives are compared:
 
-* ``aggregate`` - mean time loss and VKT only (the original two-output objective);
+* ``aggregate`` - mean time loss and VKT only (two-output objective);
 * ``extended``  - adds completed trips and the hourly arrival profile.
 
 Calibrated parameters are re-simulated with FRESH seeds and compared on outputs that were and
@@ -19,7 +19,7 @@ from .config import BOUNDS, FEATURES, HIGH, HOURS, LOW
 from .design import random_design
 from .surrogates import Surrogate
 
-AGG = ["mean_time_loss_sec", "total_vkt_km"]  # the original two-output objective
+AGG = ["mean_time_loss_sec", "total_vkt_km"]  # two-output aggregate objective
 OBJECTIVES = {
     "aggregate": AGG,
     "extended": AGG + ["total_completed_trips"] + [f"arrivals_hour_{h}" for h in HOURS],
