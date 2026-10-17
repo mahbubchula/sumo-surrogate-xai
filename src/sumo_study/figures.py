@@ -60,109 +60,149 @@ def _lims(*arrs, pad=0.04):
 # =========================================================================================
 def fig00_framework(T, out):
     """Methodological framework: simulation model, partitions, and claim-versus-check design."""
-    from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+    from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch, Rectangle
     aud = T("simulation_audit_by_experiment").set_index("experiment").runs
-    total = int(aud.sum())
-    W, H = 180, 182
+    W, H = 180, 162
     fig = F.new_figure(W, H)
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, W)
     ax.set_ylim(0, H)
     ax.axis("off")
-    NEU, SUR, SIM = F.INK2, F.G0, F.G1
+    TEAL, BLUE, RED, AMB, PUR, GRY = F.S4[2], F.G0, F.G1, F.S4[1], F.S4[3], "#5B6770"
+    R = 1.4  # corner radius [mm]
 
-    def box(x, y, w, h, title, lines=(), color=NEU, fill=0.9, fs=7.0, tfs=7.8, align="left"):
-        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0,rounding_size=1.6",
-                                    fc=F.tint(color, fill), ec=color, lw=0.9))
-        tx = x + 2.0 if align == "left" else x + w / 2
-        ha = "left" if align == "left" else "center"
-        ax.text(tx, y + h - 2.0, title, ha=ha, va="top", fontsize=tfs, fontweight="bold", color=F.INK)
+    def card(x, y, w, h, title, color, lines=(), hh=5.4, fs=6.8, body_fill=None, big=None, bigsize=13):
+        """White card with a coloured title band."""
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle=f"round,pad=0,rounding_size={R}",
+                                    fc=body_fill or "white", ec=color, lw=0.8, zorder=2))
+        ax.add_patch(FancyBboxPatch((x, y + h - hh), w, hh, boxstyle=f"round,pad=0,rounding_size={R}",
+                                    fc=color, ec=color, lw=0.8, zorder=3))
+        ax.add_patch(Rectangle((x, y + h - hh), w, hh / 2, fc=color, ec="none", zorder=3))
+        ax.text(x + w / 2, y + h - hh / 2, title, ha="center", va="center", fontsize=7.3,
+                fontweight="bold", color="white", zorder=4)
+        top = y + h - hh - 2.2
+        if big:
+            ax.text(x + w / 2, top - 0.4, big, ha="center", va="top", fontsize=bigsize, fontweight="bold",
+                    color=color, zorder=4)
+            top -= 7.4
         for i, line in enumerate(lines):
-            ax.text(tx, y + h - 6.3 - 3.75 * i, line, ha=ha, va="top", fontsize=fs, color=F.INK)
+            ax.text(x + w / 2, top - 3.45 * i, line, ha="center", va="top", fontsize=fs, color=F.INK, zorder=4)
 
-    def arrow(x0, y0, x1, y1, color=NEU, rad=0.0, lw=1.0):
-        ax.add_patch(FancyArrowPatch((x0, y0), (x1, y1), arrowstyle="-|>", mutation_scale=8,
-                                     color=color, lw=lw, connectionstyle=f"arc3,rad={rad}",
-                                     shrinkA=0, shrinkB=0))
+    def arrow(x0, y0, x1, y1, color=GRY, lw=1.1, ms=9):
+        ax.add_patch(FancyArrowPatch((x0, y0), (x1, y1), arrowstyle="-|>", mutation_scale=ms, color=color,
+                                     lw=lw, shrinkA=0, shrinkB=0, zorder=5))
 
     def header(y, letter, text):
-        ax.text(2, y, f"({letter})", fontsize=10.5, fontweight="bold", va="bottom", color=F.INK)
-        ax.text(10.5, y, text, fontsize=9.6, fontweight="bold", va="bottom", color=F.INK)
+        ax.text(1.5, y, f"({letter})", fontsize=10, fontweight="bold", va="center", color=F.INK)
+        ax.text(9.5, y, text, fontsize=9.2, fontweight="bold", va="center", color=F.INK)
+        ax.plot([9.5 + 0.0, W - 1.5], [y - 3.0, y - 3.0], color=F.RULE, lw=0.6)
 
-    # ---------------- (a) simulation model ----------------
-    header(175.5, "a", "Stochastic simulation model")
-    box(2, 145, 42, 28, "Nine inputs θ (uniform)",
-        ["Car ownership, car preference", "Unemployment, free-time rate", "Departure variation",
-         "Walking limit, bus headway", "Random traffic, peak share"])
-    box(50, 145, 52, 28, "SUMO 1.28 chain, one seed ω",
-        ["activitygen → duarouter → sumo", "6×6 signalized grid, 120 edges",
-         "06:30–10:30, static routes", "Run cache: hash(fingerprint, θ, ω)",
-         "Any failed run stops the pipeline"])
-    box(108, 145, 70, 28, "Outputs Y(θ, ω)",
-        ["All-vehicle delay (mean SUMO time loss)", "General-traffic delay (buses excluded)",
-         "Vehicle-kilometers traveled (VKT)", "Diagnostics: trips by vehicle class, hourly",
-         "arrivals, unfinished vehicles, teleports"])
-    arrow(44, 159, 50, 159)
-    arrow(102, 159, 108, 159)
+    # ------------------------------------------------------------- (a) simulation model
+    header(158.5, "a", "Stochastic simulation model")
+    ya, ha = 127.5, 26
+    tiles = [(1.5, 38, "Inputs θ (uniform)", ["Car ownership, car preference", "Unemployment, free-time rate",
+                                                   "Departure variation", "Walking limit, bus headway",
+                                                   "Random traffic, peak share"]),
+             (45.5, 38, "Demand generation", ["SUMO activitygen", "3,500 inhabitants, households,",
+                                             "work, school, free time", "Trips of cars, random", "traffic and buses"]),
+             (89.5, 41, "Routing and simulation", ["duarouter (static routes)", "sumo, 06:30–10:30",
+                                                   "6×6 signalized grid, 120 edges", "One seed ω for all stages",
+                                                   "Runs cached by (θ, ω)"]),
+             (136.5, 42, "Outputs Y(θ, ω)", ["All-vehicle delay", "General-traffic delay",
+                                                       "(buses excluded)", "Vehicle-kilometers traveled",
+                                                       "Trips by class, hourly arrivals"])]
+    for x, w, t, ls in tiles:
+        card(x, ya, w, ha, t, TEAL, ls)
+    for (x0, w0, *_), (x1, *_) in zip(tiles[:-1], tiles[1:]):
+        arrow(x0 + w0 + 0.6, ya + ha / 2 - 2, x1 - 0.6, ya + ha / 2 - 2, color=TEAL)
 
-    # ---------------- (b) partitions ----------------
-    header(136.5, "b", "Pre-specified partitions (disjoint settings and seed blocks)")
-    parts = [("Development", ["512 scrambled Sobol", "1 seed each"], f"{aud.get('train', 512):,} runs"),
-             ("Calibration", ["200 uniform settings", "1 seed each"], f"{aud.get('calibration', 200):,} runs"),
-             ("Test (untouched)", ["200 uniform settings", "5 seeds each"], f"{aud.get('test', 1000):,} runs")]
-    for i, (t, ls, n) in enumerate(parts):
-        x = 2 + i * 44
-        box(x, 111, 40, 23, t, ls + [n], color=NEU, fill=0.92)
-    box(134, 111, 44, 23, "Analysis protocol",
-        ["Sizes, seeds, models and", "decision rules committed", "before the full run;", "models frozen and hashed"],
-        color=NEU, fill=0.96)
+    # ------------------------------------------------------------- (b) partitions
+    header(119.5, "b", "Pre-specified partitions with disjoint settings and seeds")
+    yb, hb = 90, 25
+    parts = [(1.5, "Development", BLUE, "512", ["Scrambled Sobol, 1 seed", "Fit and cross-validate"]),
+             (46.5, "Calibration", AMB, "200", ["Uniform random, 1 seed", "Calibrate intervals only"]),
+             (91.5, "Test", PUR, "200 × 5", ["Uniform random, 5 seeds", "Evaluate once, untouched"])]
+    for x, t, c, big, ls in parts:
+        card(x, yb, 43, hb, t, c, ls, big=big, body_fill=F.tint(c, 0.94))
+    card(136.5, yb, 42, hb, "Analysis protocol", GRY,
+         ["Sizes, seeds, models and", "decision rules fixed", "before the full run;", "models frozen and hashed",
+          "before any test outcome"], body_fill=F.tint(GRY, 0.93))
 
-    # ---------------- (c) claims vs checks ----------------
-    header(103.5, "c", "Every surrogate claim is checked in SUMO")
-    box(2, 6.6, 40, 91.6, "Surrogates",
-        ["Fitted on development", "data only; fixed", "hyperparameters", "", "Ridge", "Gaussian process",
-         "Random forest", "LightGBM", "CatBoost", "XGBoost", "Ensemble (Cat + XGB)",
-         "", "Intervals: CQR, split", "conformal, GP, GP-CP", "(calibration set only)"],
-        color=SUR, fill=0.88)
-    ax.text(72, 98.6, "Surrogate claim", ha="center", va="bottom", fontsize=8, fontweight="bold", color=SUR)
-    ax.text(140, 98.6, "Simulator check", ha="center", va="bottom", fontsize=8, fontweight="bold", color=SIM)
+    # ------------------------------------------------------------- (c) claims and checks
+    header(83.5, "c", "Each surrogate claim is checked by a dedicated SUMO experiment")
+    yc0, yc1 = 1.5, 76
+    # surrogate card
+    xs, ws = 1.5, 34
+    ax.add_patch(FancyBboxPatch((xs, yc0), ws, yc1 - yc0, boxstyle=f"round,pad=0,rounding_size={R}",
+                                fc=F.tint(BLUE, 0.94), ec=BLUE, lw=0.8, zorder=2))
+    ax.add_patch(FancyBboxPatch((xs, yc1 - 5.4), ws, 5.4, boxstyle=f"round,pad=0,rounding_size={R}",
+                                fc=BLUE, ec=BLUE, lw=0.8, zorder=3))
+    ax.add_patch(Rectangle((xs, yc1 - 5.4), ws, 2.7, fc=BLUE, ec="none", zorder=3))
+    ax.text(xs + ws / 2, yc1 - 2.7, "Surrogates", ha="center", va="center", fontsize=7.3, fontweight="bold",
+            color="white", zorder=4)
+    ax.text(xs + ws / 2, yc1 - 8.3, "Fitted on development data,", ha="center", va="top", fontsize=6.6, zorder=4)
+    ax.text(xs + ws / 2, yc1 - 11.6, "fixed hyperparameters", ha="center", va="top", fontsize=6.6, zorder=4)
+    names = ["Ridge", "GaussianProcess", "RandomForest", "LightGBM", "CatBoost", "XGBoost", "Ensemble"]
+    labels = ["Ridge", "Gaussian process", "Random forest", "LightGBM", "CatBoost", "XGBoost", "Ensemble (primary)"]
+    for i, (n, l) in enumerate(zip(names, labels)):
+        yy = yc1 - 19.5 - 4.3 * i
+        ax.add_patch(Circle((xs + 5.2, yy), 1.05, fc=MCOL[n], ec="none", zorder=4))
+        ax.text(xs + 8.0, yy, l, va="center", fontsize=6.9, zorder=4,
+                fontweight="bold" if n == "Ensemble" else "normal")
+    ax.plot([xs + 3, xs + ws - 3], [yc1 - 50.5, yc1 - 50.5], color=F.tint(BLUE, 0.6), lw=0.6, zorder=4)
+    ax.text(xs + ws / 2, yc1 - 53.0, "Prediction intervals", ha="center", va="top", fontsize=6.9,
+            fontweight="bold", zorder=4)
+    for i, l in enumerate(["CQR, split conformal,", "Gaussian process,", "GP-normalized conformal"]):
+        ax.text(xs + ws / 2, yc1 - 57.0 - 3.4 * i, l, ha="center", va="top", fontsize=6.6, zorder=4)
+
     rows = [
-        ("Accurate on new settings", "Frozen models on the untouched test set;", "seed-noise R² ceiling and RMSE floor",
+        ("Predictions are accurate", "Frozen models on the untouched test set;", "seed-noise ceiling from replicates",
          aud.get("test", 0) + aud.get("replication_runs", 0)),
-        ("90% intervals cover new runs", "Coverage per run, per setting and", "per congestion tertile on the test set", None),
-        ("Sensitivity ranking (Sobol,", "Direct-SUMO Sobol indices with seed-", "noise correction; 50 surrogate refits",
+        ("90% intervals cover", "Coverage per run and per congestion", "tertile on the test set", None),
+        ("Sensitivity rankings hold", "Direct-SUMO Sobol indices, noise-", "corrected; 50 surrogate refits",
          aud.get("sobol_sumo_runs", 0)),
-        ("Bus headway reduces delay", "8×8 factorial, 10 common seeds, two", "backgrounds, outcomes by vehicle class",
+        ("Bus headway reduces delay", "8×8 factorial, 10 common seeds,", "outcomes split by vehicle class",
          aud.get("mechanism_runs", 0)),
-        ("Intervention cuts delay 15%", "Matched seeds: baseline, proposal and", "random change of equal size",
+        ("Interventions cut delay 15%", "Matched seeds against baseline and", "a random change of equal size",
          aud.get("recourse_runs", 0)),
-        ("Calibration recovers θ", "Excluded targets, fresh seeds, outputs", "outside the objective, equifinality",
+        ("Calibration recovers θ", "Excluded targets, fresh seeds,", "outputs outside the objective",
          aud.get("inverse_target_runs", 0) + aud.get("inverse_validation_runs", 0)),
-        ("Model applies to a new grid", "8×8 grid: frozen transfer and four", "adaptation methods on fresh tests",
+        ("Models transfer", "8×8 grid: frozen transfer and", "four adaptation methods",
          sum(aud.get(k, 0) for k in ["transfer_runs_grid8", "adapt_runs_grid8",
                                     "adapt_calibration_runs_grid8", "adapt_test_runs_grid8"])),
     ]
-    sub = {2: "SHAP, ALE)"}
-    rh, gap, y0 = 11.6, 1.7, 86.6
+    xc, wc, xk, wk = 41, 47, 95, 68
+    ax.text(xc + wc / 2, yc1 - 1.6, "Surrogate claim", ha="center", va="center", fontsize=7.6,
+            fontweight="bold", color=BLUE)
+    ax.text(xk + wk / 2, yc1 - 1.6, "Simulator check in SUMO", ha="center", va="center", fontsize=7.6,
+            fontweight="bold", color=RED)
+    ax.text(171.5, yc1 - 1.6, "Runs", ha="center", va="center", fontsize=7.6, fontweight="bold", color=F.INK2)
+    rh, gap = 8.4, 1.55
+    top = yc1 - 5.2
     for i, (claim, c1, c2, n) in enumerate(rows):
-        y = y0 - i * (rh + gap)
-        ax.add_patch(FancyBboxPatch((48, y), 48, rh, boxstyle="round,pad=0,rounding_size=1.2",
-                                    fc=F.tint(SUR, 0.9), ec=SUR, lw=0.8))
-        ax.text(50, y + rh / 2 + (1.9 if i in sub else 0), claim, va="center", fontsize=7.2, color=F.INK)
-        if i in sub:
-            ax.text(50, y + rh / 2 - 1.9, sub[i], va="center", fontsize=7.2, color=F.INK)
-        ax.add_patch(FancyBboxPatch((102, y), 76, rh, boxstyle="round,pad=0,rounding_size=1.2",
-                                    fc=F.tint(SIM, 0.9), ec=SIM, lw=0.8))
-        ax.text(104, y + rh / 2 + 1.9, c1, va="center", fontsize=7.0, color=F.INK)
-        ax.text(104, y + rh / 2 - 1.9, c2, va="center", fontsize=7.0, color=F.INK)
+        y = top - (i + 1) * rh - i * gap
+        ym = y + rh / 2
+        ax.add_patch(FancyBboxPatch((xc, y), wc, rh, boxstyle=f"round,pad=0,rounding_size={R}",
+                                    fc="white", ec=BLUE, lw=0.8, zorder=2))
+        ax.add_patch(Circle((xc + 4.6, ym), 2.55, fc=BLUE, ec="none", zorder=4))
+        ax.text(xc + 4.6, ym, str(i + 1), ha="center", va="center", fontsize=7.2, fontweight="bold",
+                color="white", zorder=5)
+        ax.text(xc + 9.2, ym, claim, va="center", fontsize=7.0, color=F.INK, zorder=4)
+        ax.add_patch(FancyBboxPatch((xk, y), wk, rh, boxstyle=f"round,pad=0,rounding_size={R}",
+                                    fc=F.tint(RED, 0.92), ec=RED, lw=0.8, zorder=2))
+        ax.text(xk + 3, ym + 1.75, c1, va="center", fontsize=6.8, color=F.INK, zorder=4)
+        ax.text(xk + 3, ym - 1.75, c2, va="center", fontsize=6.8, color=F.INK, zorder=4)
         if n:
-            ax.text(176.5, y + rh - 1.3, f"{int(n):,} runs", ha="right", va="top", fontsize=6.4,
-                    color=SIM, fontweight="bold")
-        arrow(42, y + rh / 2, 48, y + rh / 2, color=SUR, lw=0.8)
-        arrow(96, y + rh / 2, 102, y + rh / 2, color=SIM, lw=0.9)
-    ax.text(90, 1.2, f"Total {total:,} SUMO runs; every number in the article is computed from saved result tables.",
-            ha="center", va="bottom", fontsize=7.2, style="italic", color=F.INK2)
+            ax.add_patch(FancyBboxPatch((165.5, ym - 2.4), 12.5, 4.8, boxstyle="round,pad=0,rounding_size=2.4",
+                                        fc=F.tint(GRY, 0.85), ec="none", zorder=2))
+            ax.text(171.75, ym, f"{int(n):,}", ha="center", va="center", fontsize=6.9, fontweight="bold",
+                    color=F.INK, zorder=4)
+        else:
+            ax.text(171.75, ym, "test set", ha="center", va="center", fontsize=6.4, color=F.INK2, zorder=4)
+        arrow(xs + ws + 0.4, ym, xc - 0.4, ym, color=BLUE, lw=0.8, ms=7)
+        arrow(xc + wc + 0.4, ym, xk - 0.4, ym, color=RED, lw=0.9, ms=7)
     F.save(fig, out / "Fig01_methodological_framework")
+
 
 # =========================================================================================
 def fig01_design(T, out):
