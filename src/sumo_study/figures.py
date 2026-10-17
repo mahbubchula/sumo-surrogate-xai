@@ -161,7 +161,7 @@ def fig02_noise(T, out):
         for i, v in enumerate(100 * d.noise_share):
             ax.text(i + (k - 0.5) * w, v, f"{v:.1f}", ha="center", va="bottom", fontsize=7.2)
     ax.set_xticks(range(3), ["All-vehicle\ndelay", "VKT", "General\ndelay"])
-    ax.set_ylabel("Seed-noise share of variance [%]")
+    ax.set_ylabel("Seed-noise share [%]")
     ax.set_ylim(0, 100 * sub.noise_share.max() * 1.45)
     ax.legend(fontsize=7.3, loc="upper left")
     F.ygrid(ax)
