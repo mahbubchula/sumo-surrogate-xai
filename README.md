@@ -13,6 +13,8 @@ calibrated parameters) is checked against fresh simulations.
 
 ## What the study does
 
+<p align="center"><img src="results/full/figures/png/Fig01_methodological_framework.png" width="85%"></p>
+
 | Question | Experiment |
 |---|---|
 | How accurate are surrogates on new settings? | 512 Sobol development settings; 200 calibration and 200 test settings drawn independently; models frozen and hashed before testing |
@@ -37,7 +39,7 @@ calibrated parameters) is checked against fresh simulations.
 | Can calibration recover parameters? | Two aggregate outputs: error 0.29 of range (random guess 0.33); eight outputs incl. hourly arrivals: 0.20 |
 | Do models transfer to an 8 × 8 grid? | Frozen: R² < −12, coverage 0 %; residual adaptation with 128 runs: R² 0.93 |
 
-<p align="center"><img src="results/full/figures/png/Fig08_headway_mechanism.png" width="85%"></p>
+<p align="center"><img src="results/full/figures/png/Fig09_headway_mechanism.png" width="85%"></p>
 
 ## Repository layout
 

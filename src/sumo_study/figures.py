@@ -56,6 +56,114 @@ def _lims(*arrs, pad=0.04):
     return lo - d, hi + d
 
 
+
+# =========================================================================================
+def fig00_framework(T, out):
+    """Methodological framework: simulation model, partitions, and claim-versus-check design."""
+    from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+    aud = T("simulation_audit_by_experiment").set_index("experiment").runs
+    total = int(aud.sum())
+    W, H = 180, 182
+    fig = F.new_figure(W, H)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, W)
+    ax.set_ylim(0, H)
+    ax.axis("off")
+    NEU, SUR, SIM = F.INK2, F.G0, F.G1
+
+    def box(x, y, w, h, title, lines=(), color=NEU, fill=0.9, fs=7.0, tfs=7.8, align="left"):
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0,rounding_size=1.6",
+                                    fc=F.tint(color, fill), ec=color, lw=0.9))
+        tx = x + 2.0 if align == "left" else x + w / 2
+        ha = "left" if align == "left" else "center"
+        ax.text(tx, y + h - 2.0, title, ha=ha, va="top", fontsize=tfs, fontweight="bold", color=F.INK)
+        for i, line in enumerate(lines):
+            ax.text(tx, y + h - 6.3 - 3.75 * i, line, ha=ha, va="top", fontsize=fs, color=F.INK)
+
+    def arrow(x0, y0, x1, y1, color=NEU, rad=0.0, lw=1.0):
+        ax.add_patch(FancyArrowPatch((x0, y0), (x1, y1), arrowstyle="-|>", mutation_scale=8,
+                                     color=color, lw=lw, connectionstyle=f"arc3,rad={rad}",
+                                     shrinkA=0, shrinkB=0))
+
+    def header(y, letter, text):
+        ax.text(2, y, f"({letter})", fontsize=10.5, fontweight="bold", va="bottom", color=F.INK)
+        ax.text(10.5, y, text, fontsize=9.6, fontweight="bold", va="bottom", color=F.INK)
+
+    # ---------------- (a) simulation model ----------------
+    header(175.5, "a", "Stochastic simulation model")
+    box(2, 145, 42, 28, "Nine inputs θ (uniform)",
+        ["Car ownership, car preference", "Unemployment, free-time rate", "Departure variation",
+         "Walking limit, bus headway", "Random traffic, peak share"])
+    box(50, 145, 52, 28, "SUMO 1.28 chain, one seed ω",
+        ["activitygen → duarouter → sumo", "6×6 signalized grid, 120 edges",
+         "06:30–10:30, static routes", "Run cache: hash(fingerprint, θ, ω)",
+         "Any failed run stops the pipeline"])
+    box(108, 145, 70, 28, "Outputs Y(θ, ω)",
+        ["All-vehicle delay (mean SUMO time loss)", "General-traffic delay (buses excluded)",
+         "Vehicle-kilometers traveled (VKT)", "Diagnostics: trips by vehicle class, hourly",
+         "arrivals, unfinished vehicles, teleports"])
+    arrow(44, 159, 50, 159)
+    arrow(102, 159, 108, 159)
+
+    # ---------------- (b) partitions ----------------
+    header(136.5, "b", "Pre-specified partitions (disjoint settings and seed blocks)")
+    parts = [("Development", ["512 scrambled Sobol", "1 seed each"], f"{aud.get('train', 512):,} runs"),
+             ("Calibration", ["200 uniform settings", "1 seed each"], f"{aud.get('calibration', 200):,} runs"),
+             ("Test (untouched)", ["200 uniform settings", "5 seeds each"], f"{aud.get('test', 1000):,} runs")]
+    for i, (t, ls, n) in enumerate(parts):
+        x = 2 + i * 44
+        box(x, 111, 40, 23, t, ls + [n], color=NEU, fill=0.92)
+    box(134, 111, 44, 23, "Analysis protocol",
+        ["Sizes, seeds, models and", "decision rules committed", "before the full run;", "models frozen and hashed"],
+        color=NEU, fill=0.96)
+
+    # ---------------- (c) claims vs checks ----------------
+    header(103.5, "c", "Every surrogate claim is checked in SUMO")
+    box(2, 6.6, 40, 91.6, "Surrogates",
+        ["Fitted on development", "data only; fixed", "hyperparameters", "", "Ridge", "Gaussian process",
+         "Random forest", "LightGBM", "CatBoost", "XGBoost", "Ensemble (Cat + XGB)",
+         "", "Intervals: CQR, split", "conformal, GP, GP-CP", "(calibration set only)"],
+        color=SUR, fill=0.88)
+    ax.text(72, 98.6, "Surrogate claim", ha="center", va="bottom", fontsize=8, fontweight="bold", color=SUR)
+    ax.text(140, 98.6, "Simulator check", ha="center", va="bottom", fontsize=8, fontweight="bold", color=SIM)
+    rows = [
+        ("Accurate on new settings", "Frozen models on the untouched test set;", "seed-noise R² ceiling and RMSE floor",
+         aud.get("test", 0) + aud.get("replication_runs", 0)),
+        ("90% intervals cover new runs", "Coverage per run, per setting and", "per congestion tertile on the test set", None),
+        ("Sensitivity ranking (Sobol,", "Direct-SUMO Sobol indices with seed-", "noise correction; 50 surrogate refits",
+         aud.get("sobol_sumo_runs", 0)),
+        ("Bus headway reduces delay", "8×8 factorial, 10 common seeds, two", "backgrounds, outcomes by vehicle class",
+         aud.get("mechanism_runs", 0)),
+        ("Intervention cuts delay 15%", "Matched seeds: baseline, proposal and", "random change of equal size",
+         aud.get("recourse_runs", 0)),
+        ("Calibration recovers θ", "Excluded targets, fresh seeds, outputs", "outside the objective, equifinality",
+         aud.get("inverse_target_runs", 0) + aud.get("inverse_validation_runs", 0)),
+        ("Model applies to a new grid", "8×8 grid: frozen transfer and four", "adaptation methods on fresh tests",
+         sum(aud.get(k, 0) for k in ["transfer_runs_grid8", "adapt_runs_grid8",
+                                    "adapt_calibration_runs_grid8", "adapt_test_runs_grid8"])),
+    ]
+    sub = {2: "SHAP, ALE)"}
+    rh, gap, y0 = 11.6, 1.7, 86.6
+    for i, (claim, c1, c2, n) in enumerate(rows):
+        y = y0 - i * (rh + gap)
+        ax.add_patch(FancyBboxPatch((48, y), 48, rh, boxstyle="round,pad=0,rounding_size=1.2",
+                                    fc=F.tint(SUR, 0.9), ec=SUR, lw=0.8))
+        ax.text(50, y + rh / 2 + (1.9 if i in sub else 0), claim, va="center", fontsize=7.2, color=F.INK)
+        if i in sub:
+            ax.text(50, y + rh / 2 - 1.9, sub[i], va="center", fontsize=7.2, color=F.INK)
+        ax.add_patch(FancyBboxPatch((102, y), 76, rh, boxstyle="round,pad=0,rounding_size=1.2",
+                                    fc=F.tint(SIM, 0.9), ec=SIM, lw=0.8))
+        ax.text(104, y + rh / 2 + 1.9, c1, va="center", fontsize=7.0, color=F.INK)
+        ax.text(104, y + rh / 2 - 1.9, c2, va="center", fontsize=7.0, color=F.INK)
+        if n:
+            ax.text(176.5, y + rh - 1.3, f"{int(n):,} runs", ha="right", va="top", fontsize=6.4,
+                    color=SIM, fontweight="bold")
+        arrow(42, y + rh / 2, 48, y + rh / 2, color=SUR, lw=0.8)
+        arrow(96, y + rh / 2, 102, y + rh / 2, color=SIM, lw=0.9)
+    ax.text(90, 1.2, f"Total {total:,} SUMO runs; every number in the article is computed from saved result tables.",
+            ha="center", va="bottom", fontsize=7.2, style="italic", color=F.INK2)
+    F.save(fig, out / "Fig01_methodological_framework")
+
 # =========================================================================================
 def fig01_design(T, out):
     geom = T.json("network_geometry")
@@ -119,7 +227,7 @@ def fig01_design(T, out):
                     show_stats=False)
         ax.set_xlabel(TSHORT[t])
         F.panel(fig, ax, letter, "All-vehicle delay" if j == 0 else "General-traffic delay")
-    F.save(fig, out / "Fig01_design_and_network")
+    F.save(fig, out / "Fig02_design_and_network")
 
 
 # =========================================================================================
@@ -189,7 +297,7 @@ def fig02_noise(T, out):
     F.clean_left(ax)
     F.ygrid(ax, "x")
     F.panel(fig, ax, "d", "Noise floor")
-    F.save(fig, out / "Fig02_simulation_noise")
+    F.save(fig, out / "Fig03_simulation_noise")
 
 
 # =========================================================================================
@@ -233,7 +341,7 @@ def fig03_development(T, out):
             ax.legend(fontsize=7, loc="upper right")
         F.panel(fig, ax, "bcd"[j], {"mean_time_loss_sec": "All-vehicle delay", "total_vkt_km": "VKT",
                                     "general_time_loss_sec": "General delay"}[t])
-    F.save(fig, out / "Fig03_development_and_learning")
+    F.save(fig, out / "Fig04_development_and_learning")
 
 
 # =========================================================================================
@@ -303,7 +411,7 @@ def fig04_test(T, out):
     F.clean_left(ax)
     F.ygrid(ax, "x")
     F.panel(fig, ax, "e", "Paired error differences")
-    F.save(fig, out / "Fig04_independent_test")
+    F.save(fig, out / "Fig05_independent_test")
 
 
 # =========================================================================================
@@ -395,7 +503,7 @@ def fig05_intervals(T, out):
     ax.legend(fontsize=7.2, loc="lower left")
     F.ygrid(ax)
     F.panel(fig, ax, "d", "Conditional coverage")
-    F.save(fig, out / "Fig05_predictive_intervals")
+    F.save(fig, out / "Fig06_predictive_intervals")
 
 
 # =========================================================================================
@@ -454,7 +562,7 @@ def fig06_sobol(T, out):
     ax.legend(fontsize=7, loc="upper left")
     F.ygrid(ax)
     F.panel(fig, ax, "d", "Simulator vs surrogate")
-    F.save(fig, out / "Fig06_sobol_sensitivity")
+    F.save(fig, out / "Fig07_sobol_sensitivity")
 
 
 # =========================================================================================
@@ -485,7 +593,7 @@ def fig07_ale(T, out):
                 ax.tick_params(axis="y", labelleft=False)
             ax.set_ylim(*ylims[k])
             F.panel(fig, ax, "abcdef"[3 * row + j], f"{SHORT[k]}, {'all vehicles' if row == 0 else 'general'}")
-    F.save(fig, out / "Fig07_ALE_response_shapes")
+    F.save(fig, out / "Fig08_ALE_response_shapes")
 
 
 # =========================================================================================
@@ -560,7 +668,7 @@ def fig08_mechanism(T, out):
     ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3)
     F.clean_left(ax)
     F.panel(fig, ax, "d", "Variance shares")
-    F.save(fig, out / "Fig08_headway_mechanism")
+    F.save(fig, out / "Fig09_headway_mechanism")
 
 
 # =========================================================================================
@@ -627,7 +735,7 @@ def fig09_recourse(T, out):
     ax.axvline(0.95, color=F.G1, lw=0.8, ls="--")
     ax.set_xlabel("Recourse / baseline ratio")
     F.panel(fig, ax, "d", "Side effects")
-    F.save(fig, out / "Fig09_recourse_validation")
+    F.save(fig, out / "Fig10_recourse_validation")
 
 
 # =========================================================================================
@@ -700,7 +808,7 @@ def fig10_inverse(T, out):
               loc="upper center", bbox_to_anchor=(0.5, -0.2))
     F.ygrid(ax)
     F.panel(fig, ax, "c", "Calibrated settings re-simulated")
-    F.save(fig, out / "Fig10_inverse_calibration")
+    F.save(fig, out / "Fig11_inverse_calibration")
 
 
 # =========================================================================================
@@ -774,10 +882,10 @@ def fig11_transfer_robustness(T, out):
     ax.legend(fontsize=7.2, title="Routing", title_fontsize=7.2)
     F.ygrid(ax)
     F.panel(fig, ax, "d", "Network state")
-    F.save(fig, out / "Fig11_transfer_and_robustness")
+    F.save(fig, out / "Fig12_transfer_and_robustness")
 
 
-FIGURES = [fig01_design, fig02_noise, fig03_development, fig04_test, fig05_intervals, fig06_sobol,
+FIGURES = [fig00_framework, fig01_design, fig02_noise, fig03_development, fig04_test, fig05_intervals, fig06_sobol,
            fig07_ale, fig08_mechanism, fig09_recourse, fig10_inverse, fig11_transfer_robustness]
 
 
